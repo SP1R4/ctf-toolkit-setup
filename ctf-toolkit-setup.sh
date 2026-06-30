@@ -353,6 +353,56 @@ install_hashcracker() {
     fi
 }
 
+# Qsafe: post-quantum file encryption, Kyber1024 + AES-256-GCM (https://github.com/SP1R4/Qsafe).
+# C tool built with make; needs OpenSSL 3 + liboqs. liboqs isn't in apt, so build it
+# from source (library only) into /usr/local, then build+install qsafe on top.
+install_qsafe() {
+    if command -v qsafe &>/dev/null; then log "qsafe already installed, skipping"; return; fi
+
+    # OpenSSL headers for the link step (build-essential/cmake/git come from the core apt set).
+    install_apt libssl-dev
+
+    # liboqs (ML-KEM-1024). Build + install once; skip if it's already on the system.
+    if ldconfig -p 2>/dev/null | grep -q liboqs || [[ -f /usr/local/include/oqs/oqs.h ]]; then
+        log "liboqs already present, skipping its build"
+    else
+        log "Building liboqs from source (required by qsafe)..."
+        local oqs; oqs=$(mktempd)
+        if ! git clone --depth 1 --branch 0.12.0 https://github.com/open-quantum-safe/liboqs "$oqs/src" >>"$APT_LOG" 2>&1; then
+            err "liboqs clone failed"; FAILED+=("qsafe-liboqs"); return
+        fi
+        if ! cmake -S "$oqs/src" -B "$oqs/build" -DCMAKE_BUILD_TYPE=Release -DOQS_BUILD_ONLY_LIB=ON >>"$APT_LOG" 2>&1 \
+            || ! cmake --build "$oqs/build" -j"$(nproc)" >>"$APT_LOG" 2>&1; then
+            err "liboqs build failed (see $APT_LOG)"; FAILED+=("qsafe-liboqs"); return
+        fi
+        $SUDO cmake --install "$oqs/build" >>"$APT_LOG" 2>&1
+        $SUDO ldconfig
+    fi
+
+    # Build + install Qsafe itself (binary + man page into /usr/local).
+    local dir="$HOME/tools/Qsafe"
+    if [[ -d "$dir/.git" ]]; then
+        log "Qsafe already present — updating..."
+        git -C "$dir" pull --ff-only >>"$APT_LOG" 2>&1 || warn "Qsafe update skipped"
+    else
+        log "Cloning Qsafe..."
+        mkdir -p "$HOME/tools"
+        if ! git clone --depth 1 https://github.com/SP1R4/Qsafe "$dir" >>"$APT_LOG" 2>&1; then
+            err "Qsafe clone failed"; FAILED+=("qsafe"); return
+        fi
+    fi
+    log "Building Qsafe..."
+    if ! make -C "$dir" >>"$APT_LOG" 2>&1; then
+        err "Qsafe build failed (see $APT_LOG)"; FAILED+=("qsafe"); return
+    fi
+    if $SUDO make -C "$dir" install >>"$APT_LOG" 2>&1; then
+        $SUDO ldconfig 2>/dev/null || true
+        log "qsafe installed to /usr/local/bin"
+    else
+        err "Qsafe install failed (see $APT_LOG)"; FAILED+=("qsafe")
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Update package lists (bail if this fails — stale lists break everything)
 # ---------------------------------------------------------------------------
@@ -427,8 +477,9 @@ if ! $NO_EXTRAS; then
     install_rsactftool
     install_cmdr
     install_hashcracker
+    install_qsafe
 else
-    warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool"
+    warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool, CMDR, hashcracker, qsafe"
 fi
 
 # ---------------------------------------------------------------------------
@@ -496,7 +547,7 @@ export PATH="$HOME/.local/bin:$PATH"
 VERIFY_CMDS=(
     nmap gobuster sqlmap nikto whatweb wfuzz feroxbuster ffuf nuclei httpx
     gdb gdb-multiarch radare2 checksec pwninit patchelf ROPgadget ropper
-    john hashcat hydra fcrackzip pdfcrack hashcracker
+    john hashcat hydra fcrackzip pdfcrack hashcracker qsafe
     exiftool foremost steghide stegseek zsteg one_gadget outguess pngcheck
     wireshark tshark tcpdump masscan proxychains4 dig whois
     rg fdfind tmux jq xxd sage wpscan

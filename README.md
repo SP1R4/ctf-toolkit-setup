@@ -98,6 +98,9 @@ build)* · `zsteg` · `outguess` · `pngcheck` · `sleuthkit` · `testdisk` ·
 - [`hashcracker`](https://github.com/SP1R4/hashcracker) — hash identification +
   cracking toolkit (hashcat/John wrapper). Installed via `pipx` as the `hashcracker`
   command (falls back to `pip` if pipx is unavailable).
+- [`Qsafe`](https://github.com/SP1R4/Qsafe) — post-quantum file encryption
+  (Kyber1024 + AES-256-GCM). Built from source (cloned to `~/tools/Qsafe`); `liboqs`
+  is built first since it isn't in apt. Installs the `qsafe` command into `/usr/local/bin`.
 
 ## How it works
 
@@ -134,6 +137,8 @@ Both are truncated at the start of each run.
 - **CMDR** — adds a `cmdr` alias to your shell rc; open a new shell or `source` it first.
 - **hashcracker** — installed via pipx into `~/.local/bin`; if `hashcracker` isn't found,
   run `pipx ensurepath` and restart your shell.
+- **Qsafe** — needs `liboqs`, which the script builds from source into `/usr/local`.
+  Skipped by `--no-extras`. If `qsafe` errors with a missing `liboqs.so`, run `sudo ldconfig`.
 - **ARM64** — use `qemu-x86_64 ./challenge` to run x86 challenge binaries.
 
 ## Verifying the install
