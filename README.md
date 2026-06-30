@@ -62,7 +62,9 @@ GITHUB_TOKEN=ghp_xxx ./ctf-toolkit-setup.sh
 
 ### Web / recon
 `nmap` · `gobuster` · `sqlmap` · `nikto` · `whatweb` · `wfuzz` · `dirb` ·
-`feroxbuster` · `ffuf` · `nuclei` · `httpx` · `seclists` (wordlists)
+`feroxbuster` · `ffuf` · `nuclei` · `httpx` · `enum4linux` · `snmp` (`snmpwalk`) ·
+`dnsrecon` · `seclists` (wordlists; `rockyou.txt` is extracted to
+`/usr/share/wordlists/rockyou.txt`)
 
 ### Binary exploitation / reverse engineering
 `gdb` · `gdb-multiarch` · `GEF` (GDB UI) · `radare2` · `binwalk` · `checksec` ·
@@ -94,7 +96,9 @@ build)* · `zsteg` · `outguess` · `pngcheck` · `sleuthkit` · `testdisk` ·
 ### Custom tools
 - [`CMDR`](https://github.com/SP1R4/CMDR) — command manager for CTF players/pentesters.
   Cloned to `~/tools/CMDR`; its installer adds a `cmdr` shell alias and tab completion
-  (open a new shell, then `cmdr -h`).
+  (open a new shell, then `cmdr -h`). The setup also auto-loads CMDR's `ctf-toolkit`
+  pack, so you get ready-to-run commands (`tk-*`) mapped to the exact binaries and
+  wordlist paths this script installs — browse them with `cmdr -s tk-`.
 - [`hashcracker`](https://github.com/SP1R4/hashcracker) — hash identification +
   cracking toolkit (hashcat/John wrapper). Installed via `pipx` as the `hashcracker`
   command (falls back to `pip` if pipx is unavailable).
