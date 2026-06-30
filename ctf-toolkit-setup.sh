@@ -307,6 +307,30 @@ install_rsactftool() {
     log "RsaCtfTool ready: python3 $dir/RsaCtfTool.py"
 }
 
+# CMDR: command manager for CTF/pentest (https://github.com/SP1R4/CMDR).
+# Cloned to ~/tools/CMDR; its own installer adds a 'cmdr' alias + tab completion.
+install_cmdr() {
+    local dir="$HOME/tools/CMDR"
+    if [[ -d "$dir/.git" ]]; then
+        log "CMDR already present — updating..."
+        git -C "$dir" pull --ff-only >>"$APT_LOG" 2>&1 || warn "CMDR update skipped"
+    else
+        log "Cloning CMDR..."
+        mkdir -p "$HOME/tools"
+        if ! git clone --depth 1 https://github.com/SP1R4/CMDR "$dir" >>"$APT_LOG" 2>&1; then
+            err "CMDR clone failed"; FAILED+=("CMDR"); return
+        fi
+    fi
+    # Run its installer non-interactively (feed '1' = default shell-alias method).
+    log "Running CMDR installer (adds 'cmdr' alias + completion to your shell rc)..."
+    if printf '1\n' | bash "$dir/install.sh" >>"$APT_LOG" 2>&1; then
+        log "CMDR installed — open a new shell (or source your rc), then run: cmdr -h"
+    else
+        warn "CMDR installer reported an issue (see $APT_LOG) — run manually: bash $dir/install.sh"
+        FAILED+=("CMDR-install")
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Update package lists (bail if this fails — stale lists break everything)
 # ---------------------------------------------------------------------------
@@ -379,6 +403,7 @@ if ! $NO_EXTRAS; then
     install_gef
     install_gems
     install_rsactftool
+    install_cmdr
 else
     warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool"
 fi
@@ -467,6 +492,10 @@ for m in pwntools Crypto sympy z3 gmpy2 impacket angr volatility3; do
         printf "  ${RED}✗${NC} py:%s\n" "$m"
     fi
 done
+# Cloned tools (alias/script-based, not on PATH in this non-interactive shell)
+[[ -f "$HOME/tools/CMDR/cmdr.sh" ]] \
+    && printf "  ${GREEN}✓${NC} %s\n" "cmdr (~/tools/CMDR, alias)" \
+    || printf "  ${RED}✗${NC} %s\n" "cmdr"
 
 # ---------------------------------------------------------------------------
 # Summary

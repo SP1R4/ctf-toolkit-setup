@@ -91,6 +91,11 @@ build)* · `zsteg` · `outguess` · `pngcheck` · `sleuthkit` · `testdisk` ·
 `git` · `python3-pip` · `pipx` · `jq` · `xxd` · `unzip` · `p7zip-full` ·
 `ripgrep` (`rg`) · `fd-find` (`fdfind`) · `tmux`
 
+### Custom tools
+[`CMDR`](https://github.com/SP1R4/CMDR) — command manager for CTF players/pentesters.
+Cloned to `~/tools/CMDR`; its installer adds a `cmdr` shell alias and tab completion
+(open a new shell, then `cmdr -h`).
+
 ## How it works
 
 - **Idempotent** — re-running skips anything already present (apt/pip/gem/binaries),
@@ -123,6 +128,7 @@ Both are truncated at the start of each run.
 - **fd-find** is invoked as `fdfind`; **ripgrep** as `rg`.
 - **nuclei** — run `nuclei -update-templates` once before first use.
 - **RsaCtfTool** — run via `python3 ~/tools/RsaCtfTool/RsaCtfTool.py`.
+- **CMDR** — adds a `cmdr` alias to your shell rc; open a new shell or `source` it first.
 - **ARM64** — use `qemu-x86_64 ./challenge` to run x86 challenge binaries.
 
 ## Verifying the install
