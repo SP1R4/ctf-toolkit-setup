@@ -18,5 +18,5 @@ jobs:
       - name: Run shellcheck
         # SC2024 — sudo doesn't affect redirects (logs are pre-created user-owned files)
         # SC1091 — can't follow sourced /etc/os-release at lint time
-        # SC2329 — cleanup() is invoked indirectly via trap
-        run: shellcheck -e SC2024,SC1091,SC2329 ctf-toolkit-setup.sh
+        # SC2317/SC2329 — cleanup() is invoked indirectly via trap (code varies by version)
+        run: shellcheck -e SC2024,SC1091,SC2317,SC2329 ctf-toolkit-setup.sh
