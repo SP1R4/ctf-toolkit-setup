@@ -92,9 +92,12 @@ build)* · `zsteg` · `outguess` · `pngcheck` · `sleuthkit` · `testdisk` ·
 `ripgrep` (`rg`) · `fd-find` (`fdfind`) · `tmux`
 
 ### Custom tools
-[`CMDR`](https://github.com/SP1R4/CMDR) — command manager for CTF players/pentesters.
-Cloned to `~/tools/CMDR`; its installer adds a `cmdr` shell alias and tab completion
-(open a new shell, then `cmdr -h`).
+- [`CMDR`](https://github.com/SP1R4/CMDR) — command manager for CTF players/pentesters.
+  Cloned to `~/tools/CMDR`; its installer adds a `cmdr` shell alias and tab completion
+  (open a new shell, then `cmdr -h`).
+- [`hashcracker`](https://github.com/SP1R4/hashcracker) — hash identification +
+  cracking toolkit (hashcat/John wrapper). Installed via `pipx` as the `hashcracker`
+  command (falls back to `pip` if pipx is unavailable).
 
 ## How it works
 
@@ -129,6 +132,8 @@ Both are truncated at the start of each run.
 - **nuclei** — run `nuclei -update-templates` once before first use.
 - **RsaCtfTool** — run via `python3 ~/tools/RsaCtfTool/RsaCtfTool.py`.
 - **CMDR** — adds a `cmdr` alias to your shell rc; open a new shell or `source` it first.
+- **hashcracker** — installed via pipx into `~/.local/bin`; if `hashcracker` isn't found,
+  run `pipx ensurepath` and restart your shell.
 - **ARM64** — use `qemu-x86_64 ./challenge` to run x86 challenge binaries.
 
 ## Verifying the install

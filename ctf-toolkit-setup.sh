@@ -331,6 +331,28 @@ install_cmdr() {
     fi
 }
 
+# hashcracker: hash ID + cracking toolkit (https://github.com/SP1R4/hashcracker).
+# pyproject package with a 'hashcracker' console script — installed via pipx (isolated).
+install_hashcracker() {
+    if command -v hashcracker &>/dev/null; then log "hashcracker already installed, skipping"; return; fi
+    local src="git+https://github.com/SP1R4/hashcracker"
+    if command -v pipx &>/dev/null; then
+        log "Installing hashcracker (pipx)..."
+        if pipx install "$src" >>"$PIP_LOG" 2>&1; then
+            pipx ensurepath >>"$PIP_LOG" 2>&1 || true
+            log "hashcracker installed via pipx"
+            return
+        fi
+        warn "pipx install failed — falling back to pip"
+    fi
+    log "Installing hashcracker (pip)..."
+    if "$PIP" install "$src" --break-system-packages >>"$PIP_LOG" 2>&1; then
+        log "hashcracker installed via pip"
+    else
+        err "hashcracker install failed (see $PIP_LOG)"; FAILED+=("hashcracker")
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Update package lists (bail if this fails — stale lists break everything)
 # ---------------------------------------------------------------------------
@@ -404,6 +426,7 @@ if ! $NO_EXTRAS; then
     install_gems
     install_rsactftool
     install_cmdr
+    install_hashcracker
 else
     warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool"
 fi
@@ -468,10 +491,12 @@ $SUDO apt-get clean >/dev/null 2>&1 || true
 # ---------------------------------------------------------------------------
 echo
 log "Verifying installed tools (command availability):"
+# Include pipx/user install dir so pipx-installed tools (hashcracker) are found.
+export PATH="$HOME/.local/bin:$PATH"
 VERIFY_CMDS=(
     nmap gobuster sqlmap nikto whatweb wfuzz feroxbuster ffuf nuclei httpx
     gdb gdb-multiarch radare2 checksec pwninit patchelf ROPgadget ropper
-    john hashcat hydra fcrackzip pdfcrack
+    john hashcat hydra fcrackzip pdfcrack hashcracker
     exiftool foremost steghide stegseek zsteg one_gadget outguess pngcheck
     wireshark tshark tcpdump masscan proxychains4 dig whois
     rg fdfind tmux jq xxd sage wpscan
