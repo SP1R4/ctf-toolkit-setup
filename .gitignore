@@ -1,0 +1,18 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor / tooling
+.claude/
+.vscode/
+.idea/
+
+# Install logs the script writes
+*.log
+ctf_apt_install.log
+ctf_pip_install.log
+
+# Downloaded tools (script puts these under ~/tools, but ignore if run in-repo)
+tools/
+ghidra_*/
+ghidra_*.zip
