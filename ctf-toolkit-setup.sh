@@ -414,6 +414,29 @@ install_qsafe() {
     fi
 }
 
+# BackupHandler: backup orchestration — local/SSH/S3/MySQL, encryption, dedup
+# (https://github.com/SP1R4/BackupHandler). pyproject package exposing a
+# 'backup-handler' console script — installed via pipx (isolated), pip fallback.
+install_backuphandler() {
+    if command -v backup-handler &>/dev/null; then log "backup-handler already installed, skipping"; return; fi
+    local src="git+https://github.com/SP1R4/BackupHandler"
+    if command -v pipx &>/dev/null; then
+        log "Installing backup-handler (pipx)..."
+        if pipx install "$src" >>"$PIP_LOG" 2>&1; then
+            pipx ensurepath >>"$PIP_LOG" 2>&1 || true
+            log "backup-handler installed via pipx"
+            return
+        fi
+        warn "pipx install failed — falling back to pip"
+    fi
+    log "Installing backup-handler (pip)..."
+    if "$PIP" install "$src" --break-system-packages >>"$PIP_LOG" 2>&1; then
+        log "backup-handler installed via pip"
+    else
+        err "backup-handler install failed (see $PIP_LOG)"; FAILED+=("backup-handler")
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Update package lists (bail if this fails — stale lists break everything)
 # ---------------------------------------------------------------------------
@@ -507,8 +530,9 @@ if ! $NO_EXTRAS; then
     install_cmdr
     install_hashcracker
     install_qsafe
+    install_backuphandler
 else
-    warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool, CMDR, hashcracker, qsafe"
+    warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool, CMDR, hashcracker, qsafe, backup-handler"
 fi
 
 # ---------------------------------------------------------------------------
@@ -576,7 +600,7 @@ export PATH="$HOME/.local/bin:$PATH"
 VERIFY_CMDS=(
     nmap gobuster sqlmap nikto whatweb wfuzz feroxbuster ffuf nuclei httpx
     gdb gdb-multiarch radare2 checksec pwninit patchelf ROPgadget ropper
-    john hashcat hydra fcrackzip pdfcrack hashcracker qsafe
+    john hashcat hydra fcrackzip pdfcrack hashcracker qsafe backup-handler
     exiftool foremost steghide stegseek zsteg one_gadget outguess pngcheck
     wireshark tshark tcpdump masscan proxychains4 dig whois
     enum4linux snmpwalk dnsrecon

@@ -105,6 +105,10 @@ build)* · `zsteg` · `outguess` · `pngcheck` · `sleuthkit` · `testdisk` ·
 - [`Qsafe`](https://github.com/SP1R4/Qsafe) — post-quantum file encryption
   (Kyber1024 + AES-256-GCM). Built from source (cloned to `~/tools/Qsafe`); `liboqs`
   is built first since it isn't in apt. Installs the `qsafe` command into `/usr/local/bin`.
+- [`BackupHandler`](https://github.com/SP1R4/BackupHandler) — backup orchestration with
+  local/SSH/S3/MySQL targets, AES-256 encryption, dedup, and scheduling. Installed via
+  `pipx` as the `backup-handler` command (falls back to `pip` if pipx is unavailable).
+  CMDR's `ctf-toolkit` pack ships matching `tk-backup*` commands for it.
 
 ## How it works
 
@@ -143,6 +147,8 @@ Both are truncated at the start of each run.
   run `pipx ensurepath` and restart your shell.
 - **Qsafe** — needs `liboqs`, which the script builds from source into `/usr/local`.
   Skipped by `--no-extras`. If `qsafe` errors with a missing `liboqs.so`, run `sudo ldconfig`.
+- **BackupHandler** — installed via pipx into `~/.local/bin` as `backup-handler`; if it
+  isn't found, run `pipx ensurepath` and restart your shell.
 - **ARM64** — use `qemu-x86_64 ./challenge` to run x86 challenge binaries.
 
 ## Verifying the install
