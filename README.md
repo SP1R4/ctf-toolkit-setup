@@ -66,6 +66,21 @@ GITHUB_TOKEN=ghp_xxx ./ctf-toolkit-setup.sh
 `dnsrecon` · `seclists` (wordlists; `rockyou.txt` is extracted to
 `/usr/share/wordlists/rockyou.txt`)
 
+### Advanced recon / web (ProjectDiscovery + Go tools)
+`subfinder` · `dnsx` · `naabu` · `katana` · `amass` · `gau` · `waybackurls` ·
+`dalfox` (XSS) · `gowitness` (screenshots) · `jwt_tool` *(cloned to `~/tools`)*
+— built with `go install` into `~/.local/bin`.
+
+### Active Directory / Windows
+`netexec` (`nxc`) · `impacket` (`impacket-GetUserSPNs`, `-GetNPUsers`, `-secretsdump`,
+`-psexec`, `-wmiexec`, `-ntlmrelayx`, …) · `bloodhound-python` · `certipy` (ADCS) ·
+`kerbrute` · `ldapdomaindump` · `ldap-utils` (`ldapsearch`) · `evil-winrm` ·
+`responder` *(cloned to `~/tools`)*
+
+### Pivoting / tunnelling
+`chisel` · `ligolo-ng` (`ligolo-proxy`) · `sshuttle` · `proxychains4` · `socat` ·
+`uploadserver` (`python3 -m uploadserver`)
+
 ### Binary exploitation / reverse engineering
 `gdb` · `gdb-multiarch` · `GEF` (GDB UI) · `radare2` · `binwalk` · `checksec` ·
 `ltrace` · `strace` · `patchelf` · `pwninit` · `libc6-dbg` · `ROPgadget` · `ropper` ·
@@ -149,6 +164,17 @@ Both are truncated at the start of each run.
   Skipped by `--no-extras`. If `qsafe` errors with a missing `liboqs.so`, run `sudo ldconfig`.
 - **BackupHandler** — installed via pipx into `~/.local/bin` as `backup-handler`; if it
   isn't found, run `pipx ensurepath` and restart your shell.
+- **Go / pipx tools** — `subfinder`, `dnsx`, `naabu`, `katana`, `gau`, `waybackurls`,
+  `dalfox`, `gowitness`, `chisel`, `nxc`, `certipy`, `bloodhound-python` install into
+  `~/.local/bin`. If a command isn't found, ensure that dir is on `PATH`
+  (`pipx ensurepath`) and open a new shell.
+- **ligolo-ng** — the proxy installs as `ligolo-proxy`; download the matching **agent**
+  for the target host from the [ligolo-ng releases](https://github.com/nicocha30/ligolo-ng/releases).
+- **responder / jwt_tool** — cloned to `~/tools` with a launcher on `PATH`
+  (`responder`, `jwt_tool`).
+- **naabu** needs `libpcap-dev` (installed) at build time.
+- These pair with CMDR's `pentest-ad` / `pentest-web` / `pentest-recon` / `pentest-pivot`
+  packs — load them with `cmdr --pack load pentest-ad`, etc.
 - **ARM64** — use `qemu-x86_64 ./challenge` to run x86 challenge binaries.
 
 ## Verifying the install

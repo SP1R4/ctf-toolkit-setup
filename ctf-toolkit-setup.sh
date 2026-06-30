@@ -271,14 +271,15 @@ install_gef() {
     fi
 }
 
-# Ruby gems: zsteg (PNG/BMP stego), one_gadget (libc one-shot RCE), wpscan.
+# Ruby gems: zsteg (PNG/BMP stego), one_gadget (libc one-shot RCE), wpscan,
+# evil-winrm (interactive WinRM shell).
 install_gems() {
     if ! command -v gem &>/dev/null; then
-        warn "ruby/gem not available — skipping zsteg, one_gadget, wpscan"
+        warn "ruby/gem not available — skipping zsteg, one_gadget, wpscan, evil-winrm"
         FAILED+=("gems:ruby-missing"); return
     fi
     local g
-    for g in zsteg one_gadget wpscan; do
+    for g in zsteg one_gadget wpscan evil-winrm; do
         if gem list -i "$g" &>/dev/null; then log "$g already installed, skipping"; continue; fi
         log "Installing $g (gem)..."
         if ! $SUDO gem install "$g" >>"$APT_LOG" 2>&1; then
@@ -437,6 +438,115 @@ install_backuphandler() {
     fi
 }
 
+# Go-based offensive tooling (ProjectDiscovery recon suite, web + pivot tools).
+# Built with `go install` into ~/.local/bin (already on PATH for pipx tools),
+# so no sudo and arch-independent. Skipped cleanly if Go isn't available.
+install_go_tools() {
+    if ! command -v go &>/dev/null; then
+        warn "go not found — skipping subfinder/dnsx/naabu/katana/gau/waybackurls/dalfox/gowitness/kerbrute/chisel/amass/ligolo"
+        FAILED+=("go:missing"); return
+    fi
+    export GOBIN="$HOME/.local/bin"
+    mkdir -p "$GOBIN"
+    # name<TAB>module@version
+    local entries=(
+        "subfinder|github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+        "dnsx|github.com/projectdiscovery/dnsx/cmd/dnsx@latest"
+        "naabu|github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+        "katana|github.com/projectdiscovery/katana/cmd/katana@latest"
+        "gau|github.com/lc/gau/v2/cmd/gau@latest"
+        "waybackurls|github.com/tomnomnom/waybackurls@latest"
+        "dalfox|github.com/hahwul/dalfox/v2@latest"
+        "gowitness|github.com/sensepost/gowitness@latest"
+        "kerbrute|github.com/ropnop/kerbrute@latest"
+        "chisel|github.com/jpillora/chisel@latest"
+    )
+    local e name mod
+    for e in "${entries[@]}"; do
+        name="${e%%|*}"; mod="${e#*|}"
+        if command -v "$name" &>/dev/null || [[ -x "$GOBIN/$name" ]]; then
+            log "$name already installed, skipping"; continue
+        fi
+        log "Installing $name (go install)..."
+        if ! go install "$mod" >>"$APT_LOG" 2>&1; then
+            err "go install $name failed (see $APT_LOG)"; FAILED+=("go:$name")
+        fi
+    done
+    # amass uses a non-standard module path
+    if ! command -v amass &>/dev/null && [[ ! -x "$GOBIN/amass" ]]; then
+        log "Installing amass (go install)..."
+        go install -v github.com/owasp-amass/amass/v4/...@master >>"$APT_LOG" 2>&1 \
+            || { err "go install amass failed (see $APT_LOG)"; FAILED+=("go:amass"); }
+    else
+        log "amass already installed, skipping"
+    fi
+    # ligolo-ng: install the proxy as 'ligolo-proxy' (the agent runs on the target).
+    if ! command -v ligolo-proxy &>/dev/null && [[ ! -x "$GOBIN/ligolo-proxy" ]]; then
+        log "Installing ligolo-proxy (go install)..."
+        if go install github.com/nicocha30/ligolo-ng/cmd/proxy@latest >>"$APT_LOG" 2>&1 \
+            && [[ -x "$GOBIN/proxy" ]]; then
+            mv "$GOBIN/proxy" "$GOBIN/ligolo-proxy"
+            log "ligolo-proxy installed (agent: download for the target from the ligolo-ng releases)"
+        else
+            err "go install ligolo-proxy failed (see $APT_LOG)"; FAILED+=("go:ligolo")
+        fi
+    else
+        log "ligolo-proxy already installed, skipping"
+    fi
+}
+
+# Active-Directory / web Python tooling via pipx (isolated). Each exposes a
+# console script: netexec->nxc, certipy-ad->certipy, bloodhound->bloodhound-python,
+# ldapdomaindump->ldapdomaindump.
+install_ad_python() {
+    if ! command -v pipx &>/dev/null; then
+        warn "pipx not found — skipping netexec/certipy/bloodhound-python/ldapdomaindump"
+        FAILED+=("pipx:missing"); return
+    fi
+    # check-command|pipx-package
+    local entries=(
+        "nxc|netexec"
+        "certipy|certipy-ad"
+        "bloodhound-python|bloodhound"
+        "ldapdomaindump|ldapdomaindump"
+    )
+    local e probe pkg
+    for e in "${entries[@]}"; do
+        probe="${e%%|*}"; pkg="${e#*|}"
+        if command -v "$probe" &>/dev/null; then log "$probe already installed, skipping"; continue; fi
+        log "Installing $pkg (pipx -> $probe)..."
+        if ! pipx install "$pkg" >>"$PIP_LOG" 2>&1; then
+            err "pipx install $pkg failed (see $PIP_LOG)"; FAILED+=("pipx:$pkg")
+        fi
+    done
+    pipx ensurepath >>"$PIP_LOG" 2>&1 || true
+}
+
+# Tools distributed only as a git repo (no apt/pip/release): clone to ~/tools and
+# drop a thin launcher on PATH so the documented command name works.
+install_git_tool() {
+    local name="$1" repo="$2" entry="$3"; shift 3
+    local pipdeps=("$@")
+    if command -v "$name" &>/dev/null; then log "$name already installed, skipping"; return; fi
+    local dir="$HOME/tools/$name"
+    if [[ -d "$dir/.git" ]]; then
+        git -C "$dir" pull --ff-only >>"$APT_LOG" 2>&1 || warn "$name update skipped"
+    else
+        mkdir -p "$HOME/tools"
+        log "Cloning $name..."
+        if ! git clone --depth 1 "$repo" "$dir" >>"$APT_LOG" 2>&1; then
+            err "$name clone failed"; FAILED+=("$name"); return
+        fi
+    fi
+    if [[ ${#pipdeps[@]} -gt 0 ]]; then
+        "$PIP" install "${pipdeps[@]}" --break-system-packages >>"$PIP_LOG" 2>&1 || true
+    fi
+    local launcher="/usr/local/bin/$name"
+    printf '#!/bin/sh\nexec python3 "%s/%s" "$@"\n' "$dir" "$entry" | $SUDO tee "$launcher" >/dev/null
+    $SUDO chmod +x "$launcher"
+    log "$name installed ($launcher -> $dir/$entry)"
+}
+
 # ---------------------------------------------------------------------------
 # Update package lists (bail if this fails — stale lists break everything)
 # ---------------------------------------------------------------------------
@@ -465,6 +575,8 @@ APT_PACKAGES=(
     # networking / packet analysis
     wireshark tshark netcat-openbsd socat tcpdump
     proxychains4 dnsutils whois masscan
+    # pivoting + AD/web Go toolchain
+    sshuttle libpcap-dev golang-go ldap-utils
     # misc essentials
     git python3-pip jq unzip p7zip-full
     ripgrep fd-find tmux pipx
@@ -488,8 +600,8 @@ install_apt "${APT_PACKAGES[@]}"
 # seclists ships rockyou gzipped; extract it to the canonical path so tools
 # (john, hashcat, hydra, stegseek, ...) and the CMDR ctf-toolkit pack find it.
 if [[ ! -f /usr/share/wordlists/rockyou.txt ]]; then
-    ROCKYOU_GZ=$(ls /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz 2>/dev/null | head -1)
-    if [[ -n "${ROCKYOU_GZ:-}" ]]; then
+    ROCKYOU_GZ="/usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz"
+    if [[ -f "$ROCKYOU_GZ" ]]; then
         log "Extracting rockyou.txt to /usr/share/wordlists/..."
         $SUDO mkdir -p /usr/share/wordlists
         if $SUDO tar -xzf "$ROCKYOU_GZ" -C /usr/share/wordlists/ >>"$APT_LOG" 2>&1; then
@@ -531,8 +643,15 @@ if ! $NO_EXTRAS; then
     install_hashcracker
     install_qsafe
     install_backuphandler
+
+    # Advanced pentest tooling (pairs with CMDR's pentest-* packs):
+    #   AD/web Python (pipx), Go recon/web/pivot suite, git-only tools.
+    install_ad_python
+    install_go_tools
+    install_git_tool "responder" "https://github.com/lgandx/Responder" "Responder.py"
+    install_git_tool "jwt_tool"  "https://github.com/ticarpi/jwt_tool"  "jwt_tool.py"  termcolor cprint pycryptodomex requests
 else
-    warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool, CMDR, hashcracker, qsafe, backup-handler"
+    warn "--no-extras: skipping ffuf, nuclei, httpx, pwninit, GEF, gems, RsaCtfTool, CMDR, hashcracker, qsafe, backup-handler, AD/Go/pentest tools"
 fi
 
 # ---------------------------------------------------------------------------
@@ -542,6 +661,7 @@ log "Installing Python packages..."
 PIP_PACKAGES=(
     pwntools volatility3 pycryptodome sympy
     impacket ROPgadget ropper z3-solver gmpy2
+    uploadserver
 )
 $NO_HEAVY || PIP_PACKAGES+=(angr)
 for pkg in "${PIP_PACKAGES[@]}"; do
@@ -604,6 +724,9 @@ VERIFY_CMDS=(
     exiftool foremost steghide stegseek zsteg one_gadget outguess pngcheck
     wireshark tshark tcpdump masscan proxychains4 dig whois
     enum4linux snmpwalk dnsrecon
+    nxc certipy bloodhound-python ldapdomaindump evil-winrm kerbrute responder
+    subfinder dnsx naabu katana amass gau waybackurls dalfox gowitness jwt_tool
+    chisel ligolo-proxy sshuttle
     rg fdfind tmux jq xxd sage wpscan
     python3 "$PIP"
 )
