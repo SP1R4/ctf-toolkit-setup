@@ -1,5 +1,8 @@
 # CTF Toolkit Setup
 
+[![ShellCheck](https://github.com/SP1R4/ctf-toolkit-setup/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/SP1R4/ctf-toolkit-setup/actions/workflows/shellcheck.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A single, idempotent Bash script that provisions a broad Capture-The-Flag toolset on
 Ubuntu/Debian — across **web, pwn/reverse-engineering, crypto, forensics/stego, and
 networking**. It pulls from `apt`, `pip`, `gem`, and GitHub releases, and is
@@ -131,3 +134,7 @@ for c in nmap ffuf feroxbuster gdb radare2 john hashcat exiftool wireshark rg; d
   command -v "$c" >/dev/null && echo "✓ $c" || echo "✗ $c"
 done
 ```
+
+## License
+
+[MIT](LICENSE) © 2026 SP1R4
