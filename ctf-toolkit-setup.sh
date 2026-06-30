@@ -329,6 +329,17 @@ install_cmdr() {
         warn "CMDR installer reported an issue (see $APT_LOG) — run manually: bash $dir/install.sh"
         FAILED+=("CMDR-install")
     fi
+    # Seed the companion pack so CMDR's commands match this toolkit's binaries.
+    if [[ -f "$dir/packs/ctf-toolkit.json" ]]; then
+        log "Seeding CMDR with the ctf-toolkit command pack..."
+        if bash "$dir/cmdr.sh" --pack load ctf-toolkit >>"$APT_LOG" 2>&1; then
+            log "CMDR seeded — try: cmdr -s tk-"
+        else
+            warn "Could not load ctf-toolkit pack (see $APT_LOG) — run: cmdr --pack load ctf-toolkit"
+        fi
+    else
+        warn "ctf-toolkit pack not found in this CMDR checkout — update CMDR, then: cmdr --pack load ctf-toolkit"
+    fi
 }
 
 # hashcracker: hash ID + cracking toolkit (https://github.com/SP1R4/hashcracker).
@@ -441,6 +452,7 @@ fi
 APT_PACKAGES=(
     # web / recon
     nmap gobuster sqlmap nikto whatweb wfuzz dirb seclists
+    enum4linux snmp dnsrecon
     # binary exploitation / reverse engineering
     gdb gdb-multiarch radare2 binwalk checksec ltrace strace
     build-essential cmake libffi-dev python3-dev
@@ -472,6 +484,23 @@ else
 fi
 
 install_apt "${APT_PACKAGES[@]}"
+
+# seclists ships rockyou gzipped; extract it to the canonical path so tools
+# (john, hashcat, hydra, stegseek, ...) and the CMDR ctf-toolkit pack find it.
+if [[ ! -f /usr/share/wordlists/rockyou.txt ]]; then
+    ROCKYOU_GZ=$(ls /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz 2>/dev/null | head -1)
+    if [[ -n "${ROCKYOU_GZ:-}" ]]; then
+        log "Extracting rockyou.txt to /usr/share/wordlists/..."
+        $SUDO mkdir -p /usr/share/wordlists
+        if $SUDO tar -xzf "$ROCKYOU_GZ" -C /usr/share/wordlists/ >>"$APT_LOG" 2>&1; then
+            log "rockyou.txt ready at /usr/share/wordlists/rockyou.txt"
+        else
+            warn "rockyou extraction failed (see $APT_LOG)"; FAILED+=("rockyou")
+        fi
+    else
+        warn "rockyou.txt.tar.gz not found under seclists — skipping extraction"
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Tools that aren't in apt — install from GitHub releases (arch-aware)
@@ -574,6 +603,7 @@ VERIFY_CMDS=(
     john hashcat hydra fcrackzip pdfcrack hashcracker qsafe backup-handler
     exiftool foremost steghide stegseek zsteg one_gadget outguess pngcheck
     wireshark tshark tcpdump masscan proxychains4 dig whois
+    enum4linux snmpwalk dnsrecon
     rg fdfind tmux jq xxd sage wpscan
     python3 "$PIP"
 )
